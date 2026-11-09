@@ -1,0 +1,637 @@
+<title>Okta SSF Demo Setup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky left rail (contents + progress) beside one reading column; stacks on phones. */
+:root {
+  --bg: #f5f7fb; --surface: #ffffff; --fg: #141925; --muted: #586176; --line: #dce1ea;
+  --accent: #1d55d0; --accent-soft: #e6edfc; --code-bg: #f0f3f9; --code-fg: #1b2233;
+  --var-bg: #fff1c2; --var-fg: #5c4300;
+  --ok: #1f7a3a; --ok-soft: #e3f4e8; --warn: #9a5b00; --warn-soft: #fdf1dc; --bad: #b42318;
+  --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f131b; --surface: #161b25; --fg: #e6e9f0; --muted: #9aa3b5; --line: #2a3140;
+  --accent: #7ea2ff; --accent-soft: #1c2742; --code-bg: #0b0e15; --code-fg: #d7deeb;
+  --var-bg: #4a3a0c; --var-fg: #ffe08a;
+  --ok: #6fd28d; --ok-soft: #15301f; --warn: #f5b85c; --warn-soft: #33270f; --bad: #ff8a80; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f131b; --surface: #161b25; --fg: #e6e9f0; --muted: #9aa3b5; --line: #2a3140;
+  --accent: #7ea2ff; --accent-soft: #1c2742; --code-bg: #0b0e15; --code-fg: #d7deeb;
+  --var-bg: #4a3a0c; --var-fg: #ffe08a;
+  --ok: #6fd28d; --ok-soft: #15301f; --warn: #f5b85c; --warn-soft: #33270f; --bad: #ff8a80; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--font-body); }
+.shell { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; }
+@media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; } nav.rail { position: static !important; max-height: none !important; } }
+
+nav.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; max-height: calc(100vh - 40px); overflow: auto; font-size: 14px; }
+.rail .brand { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
+.rail .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.progress { margin: 16px 0 18px; }
+.progress .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.progress .bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .25s; }
+.progress .lbl { font-size: 12.5px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.rail a { display: flex; justify-content: space-between; gap: 8px; color: var(--fg); text-decoration: none; padding: 5px 8px; border-radius: 6px; }
+.rail a:hover { background: var(--accent-soft); }
+.rail a .n { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+.rail a.done .n { color: var(--ok); font-weight: 700; }
+.rail .grp { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 14px 8px 4px; font-weight: 600; }
+.rail .reset { margin-top: 18px; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 5px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+
+main { min-width: 0; }
+header.top h1 { font-size: clamp(28px, 4vw, 38px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 800; text-wrap: balance; }
+header.top p { margin: 0; color: var(--muted); max-width: 66ch; font-size: 17px; }
+h2 { font-size: 24px; letter-spacing: -0.015em; margin: 0 0 6px; text-wrap: balance; }
+h3 { font-size: 18px; margin: 28px 0 8px; text-wrap: balance; }
+section.part { margin-top: 56px; scroll-margin-top: 20px; }
+.part > .lede { color: var(--muted); margin: 0 0 18px; max-width: 68ch; }
+.eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+p, li { max-width: 72ch; }
+a { color: var(--accent); }
+code, kbd { font-family: var(--font-mono); font-size: .88em; }
+:not(pre) > code { background: var(--code-bg); color: var(--code-fg); padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+.ui { font-weight: 600; }
+.path { font-weight: 600; }
+.path .sep { color: var(--muted); font-weight: 400; padding: 0 3px; }
+
+/* Your values panel */
+.values { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-top: 28px; }
+.values h2 { font-size: 17px; margin-bottom: 4px; }
+.values p { color: var(--muted); font-size: 14.5px; margin: 0 0 14px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 16px; }
+.fields label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.fields input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--fg); font: 14px var(--font-mono); }
+.fields input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fields .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.v { background: var(--var-bg); color: var(--var-fg); border-radius: 3px; padding: 0 2px; }
+
+/* Flow */
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 22px 0 8px; }
+@media (max-width: 700px) { .flow { grid-template-columns: minmax(0, 1fr); } .flow .node:not(:last-child)::after { content: "↓" !important; right: 50% !important; top: auto !important; bottom: -22px; transform: translateX(50%); } .flow .node { margin-bottom: 26px; } }
+.flow .node { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-right: 34px; }
+.flow .node:last-child { margin-right: 0; }
+.flow .node:not(:last-child)::after { content: "→"; position: absolute; right: -27px; top: 50%; transform: translateY(-50%); color: var(--accent); font-weight: 700; font-size: 20px; }
+.flow .who { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.flow .what { font-weight: 700; margin: 2px 0 4px; }
+.flow .how { font-size: 13.5px; color: var(--muted); }
+
+/* Steps */
+ol.steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+ol.steps > li { counter-increment: s; max-width: none; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+ol.steps > li.checked { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+ol.steps > li.checked .body > :first-child { color: var(--muted); }
+.chk { appearance: none; width: 22px; height: 22px; margin: 2px 0 0; border: 2px solid var(--line); border-radius: 6px; cursor: pointer; display: grid; place-items: center; background: var(--bg); }
+.chk::after { content: counter(s); font: 600 12px var(--font-body); color: var(--muted); }
+.chk:checked { background: var(--ok); border-color: var(--ok); }
+.chk:checked::after { content: "✓"; color: #fff; font-size: 13px; }
+.chk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.steps .body { min-width: 0; }
+.steps .body > p:first-child, .steps .body > div:first-child { margin-top: 0; }
+.steps .body p { margin: 6px 0; }
+.steps .body ul { margin: 6px 0; padding-left: 20px; }
+.steps .body li { margin: 3px 0; }
+
+/* Code */
+.code { position: relative; margin: 10px 0; min-width: 0; }
+.code pre { margin: 0; background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font: 13px/1.55 var(--font-mono); }
+.code .lang { position: absolute; top: 7px; left: 14px; font: 600 10.5px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.code.has-lang pre { padding-top: 28px; }
+.copy { position: absolute; top: 6px; right: 6px; font: 600 12px var(--font-body); background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.copy:hover { border-color: var(--accent); color: var(--accent); }
+.copy:focus-visible { outline: 2px solid var(--accent); }
+.c { color: var(--muted); }
+
+/* Value rows (copyable single values) */
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; margin: 8px 0; font-size: 14.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--font-mono); font-size: 13px; word-break: break-all; }
+.kv .copy { position: static; }
+@media (max-width: 560px) { .kv { grid-template-columns: minmax(0, 1fr) auto; } .kv dt { grid-column: 1 / -1; margin-top: 6px; } }
+
+/* Callouts */
+.note { border-radius: 9px; padding: 11px 14px; margin: 12px 0; font-size: 14.5px; max-width: 76ch; }
+.note b:first-child { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+.note.tip { background: var(--accent-soft); }
+.note.tip b:first-child { color: var(--accent); }
+.note.warn { background: var(--warn-soft); }
+.note.warn b:first-child { color: var(--warn); }
+.note.ok { background: var(--ok-soft); }
+.note.ok b:first-child { color: var(--ok); }
+
+/* Tabs */
+.tabs { margin-top: 12px; }
+.tablist { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tablist button { font: 600 14px var(--font-body); background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; margin-bottom: -1px; }
+.tablist button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tablist button:focus-visible { outline: 2px solid var(--accent); }
+
+/* Tables */
+.tbl { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+td code { white-space: nowrap; }
+td.wrap code { white-space: normal; word-break: break-all; }
+.pill { display: inline-block; font: 600 11.5px var(--font-body); padding: 1px 8px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); white-space: nowrap; }
+.pill.bad { background: var(--warn-soft); color: var(--warn); }
+
+footer { margin-top: 64px; color: var(--muted); font-size: 13.5px; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+  <nav class="rail" aria-label="Contents">
+    <div class="brand">Okta SSF Demo Setup</div>
+    <div class="sub">Custom SSF transmitter → Okta ITP → Universal Logout</div>
+    <div class="progress"><div class="bar"><i id="pbar"></i></div><div class="lbl" id="plbl">0 of 0 steps done</div></div>
+    <ol id="toc">
+      <li><a href="#overview"><span>Overview</span></a></li>
+      <li class="grp">Setup</li>
+      <li><a href="#transmitter" data-sec="transmitter"><span>1. Deploy the transmitter</span><span class="n"></span></a></li>
+      <li><a href="#webapp" data-sec="webapp"><span>2. Deploy the web app</span><span class="n"></span></a></li>
+      <li><a href="#provider" data-sec="provider"><span>3. Register the provider</span><span class="n"></span></a></li>
+      <li><a href="#oidc" data-sec="oidc"><span>4. Create the OIDC app</span><span class="n"></span></a></li>
+      <li><a href="#ulo" data-sec="ulo"><span>5. Turn on Universal Logout</span><span class="n"></span></a></li>
+      <li><a href="#risk" data-sec="risk"><span>6. Entity risk policy</span><span class="n"></span></a></li>
+      <li><a href="#session" data-sec="session"><span>7. Session protection (optional)</span><span class="n"></span></a></li>
+      <li><a href="#demo" data-sec="demo"><span>8. Run the demo</span><span class="n"></span></a></li>
+      <li class="grp">Reference</li>
+      <li><a href="#set"><span>SET format Okta accepts</span></a></li>
+      <li><a href="#metadata"><span>Transmitter metadata</span></a></li>
+      <li><a href="#ulo-ref"><span>Universal Logout request</span></a></li>
+      <li><a href="#api"><span>SSF Receiver API</span></a></li>
+      <li><a href="#trouble"><span>Troubleshooting</span></a></li>
+      <li><a href="#local"><span>Local test</span></a></li>
+    </ol>
+    <button class="reset" id="reset" type="button">Clear checkmarks</button>
+  </nav>
+
+  <main>
+    <header class="top" id="overview">
+      <div class="eyebrow">Okta Identity Threat Protection</div>
+      <h1>Custom SSF transmitter and Universal Logout demo</h1>
+      <p>Follow these steps to show Okta ending a user's session, in Okta and in a custom web app, the moment your own security tool reports a threat through the Shared Signals Framework.</p>
+    </header>
+
+    <section class="values" aria-labelledby="vals-h">
+      <h2 id="vals-h">Your values</h2>
+      <p>Type your own URLs here and every command and value in this guide updates to match. They're saved in this browser only.</p>
+      <div class="fields">
+        <div><label for="f-org">Okta org URL</label><input id="f-org" data-key="org" placeholder="https://your-org.okta.com" spellcheck="false" autocomplete="off"><div class="hint">No trailing slash, no /oauth2/default</div></div>
+        <div><label for="f-tx">Transmitter URL (Railway)</label><input id="f-tx" data-key="tx" placeholder="https://ssf-transmitter.up.railway.app" spellcheck="false" autocomplete="off"><div class="hint">From step 1</div></div>
+        <div><label for="f-app">Web app URL (Railway)</label><input id="f-app" data-key="app" placeholder="https://acme-portal.up.railway.app" spellcheck="false" autocomplete="off"><div class="hint">From step 2</div></div>
+        <div><label for="f-email">Demo user's email</label><input id="f-email" data-key="email" placeholder="jane.doe@acme.com" spellcheck="false" autocomplete="off"><div class="hint">A non-admin Okta user</div></div>
+      </div>
+    </section>
+
+    <div class="flow" role="list" aria-label="How the demo works">
+      <div class="node" role="listitem"><div class="who">Your security tool</div><div class="what">SSF transmitter</div><div class="how">Detects a threat, signs a Security Event Token (SET) and pushes it to Okta.</div></div>
+      <div class="node" role="listitem"><div class="who">Okta ITP</div><div class="what">Risk goes to High</div><div class="how">Okta verifies the SET, raises the user's risk, and the entity risk policy runs Universal Logout.</div></div>
+      <div class="node" role="listitem"><div class="who">Acme Portal</div><div class="what">Session ends</div><div class="how">The web app gets Okta's logout call, destroys the user's sessions, and the open tab shows a banner.</div></div>
+    </div>
+
+    <div class="tbl"><table>
+      <thead><tr><th>Folder</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>transmitter/</code></td><td>SSF transmitter: SSF metadata, JWKS, SET signing, push to Okta, a web console and CLI scripts</td></tr>
+        <tr><td><code>webapp/</code></td><td>OIDC web app (authorization code with PKCE) with a Universal Logout endpoint</td></tr>
+        <tr><td><code>test/</code></td><td>Local end-to-end test against a mock Okta that applies Okta's documented SET checks</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="note tip"><b>Before you start</b>You need an Okta org with Identity Threat Protection, a super admin account, a test user who is <em>not</em> an admin, a GitHub repo with this code, and a Railway account. Keep your admin console in a separate browser so the demo doesn't sign you out.</div>
+
+    <!-- ============ 1 ============ -->
+    <section class="part" id="transmitter" data-sec="transmitter">
+      <div class="eyebrow">Railway</div>
+      <h2>1. Deploy the transmitter</h2>
+      <p class="lede">Create one Railway project and add the transmitter as its first service.</p>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In Railway, create a new project from your GitHub repo. Open the service's <span class="path">Settings<span class="sep">›</span>Root Directory</span> and set it to <code>transmitter</code>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Open <span class="path">Settings<span class="sep">›</span>Networking</span> and click <span class="ui">Generate Domain</span>. Copy the domain into <b>Transmitter URL</b> above. It becomes the SET issuer.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>On your computer, generate a signing key that stays the same across deploys:</p>
+          <div class="code"><pre>cd transmitter
+npm install
+npm run genkey</pre></div>
+          <p>Copy the single line it prints (it starts with <code>-----BEGIN PRIVATE KEY-----\n</code>).</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In <span class="ui">Variables</span>, add:</p>
+          <div class="tbl"><table><thead><tr><th>Variable</th><th>Value</th></tr></thead><tbody>
+            <tr><td><code>OKTA_ORG_URL</code></td><td class="wrap"><code class="v" data-var="org">https://your-org.okta.com</code></td></tr>
+            <tr><td><code>SIGNING_KEY_PEM</code></td><td>The line from <code>npm run genkey</code></td></tr>
+            <tr><td><code>ADMIN_PASSWORD</code></td><td>A password for the transmitter console</td></tr>
+            <tr><td><code>DEFAULT_SUBJECT_EMAIL</code></td><td class="wrap">Optional: <code class="v" data-var="email">jane.doe@acme.com</code></td></tr>
+          </tbody></table></div>
+          <div class="note warn"><b>Don't skip SIGNING_KEY_PEM</b>Without it the transmitter makes a new key every time it starts, its JWKS changes, and Okta rejects every SET with <code>invalid_key</code>.</div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>After it deploys, open the metadata and check that <code>issuer</code> is your https Railway URL:</p>
+          <div class="code"><pre><span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/ssf-configuration</pre></div></div></li>
+      </ol>
+    </section>
+
+    <!-- ============ 2 ============ -->
+    <section class="part" id="webapp" data-sec="webapp">
+      <div class="eyebrow">Railway</div>
+      <h2>2. Deploy the web app</h2>
+      <p class="lede">Add a second service to the same Railway project. You'll fill in the Okta client ID and secret after step 4.</p>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Add a new service from the same repo and set <span class="path">Settings<span class="sep">›</span>Root Directory</span> to <code>webapp</code>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Click <span class="ui">Generate Domain</span> and copy it into <b>Web app URL</b> above.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In <span class="ui">Variables</span>, add:</p>
+          <div class="tbl"><table><thead><tr><th>Variable</th><th>Value</th></tr></thead><tbody>
+            <tr><td><code>OKTA_ORG_URL</code></td><td class="wrap"><code class="v" data-var="org">https://your-org.okta.com</code></td></tr>
+            <tr><td><code>OKTA_CLIENT_ID</code></td><td>From step 4</td></tr>
+            <tr><td><code>OKTA_CLIENT_SECRET</code></td><td>From step 4</td></tr>
+            <tr><td><code>SESSION_SECRET</code></td><td>Any long random string</td></tr>
+          </tbody></table></div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Keep the service at <b>one replica</b>. Sessions are held in memory, so Okta's logout call has to reach the same instance as the browser.</p></div></li>
+      </ol>
+      <div class="note tip"><b>Running locally instead</b>Copy each <code>.env.example</code> to <code>.env</code>, export the variables and run <code>npm start</code> (transmitter on :4000, web app on :3000). Okta must reach both apps, so expose them with a tunnel such as ngrok or cloudflared and set <code>PUBLIC_URL</code> and <code>APP_BASE_URL</code> to the tunnel URLs.</div>
+    </section>
+
+    <!-- ============ 3 ============ -->
+    <section class="part" id="provider" data-sec="provider">
+      <div class="eyebrow">Okta Admin Console or API</div>
+      <h2>3. Register the transmitter as a security events provider</h2>
+      <p class="lede">This tells Okta to trust SETs signed by your transmitter. Pick one way.</p>
+
+      <div class="tabs" data-tabs>
+        <div class="tablist" role="tablist">
+          <button role="tab" aria-selected="true" aria-controls="tab-console" id="t-console" type="button">Admin Console (simplest)</button>
+          <button role="tab" aria-selected="false" aria-controls="tab-api" id="t-api" type="button">SSF Receiver API</button>
+        </div>
+        <div role="tabpanel" id="tab-console" aria-labelledby="t-console">
+          <ol class="steps">
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Go to <span class="path">Security<span class="sep">›</span>Device Integrations</span>, open the <span class="ui">Receive shared signals</span> tab, and click <span class="ui">Create stream</span>.</p></div></li>
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Set <span class="ui">Integration name</span> to <code>Custom SSF Transmitter</code>.</p></div></li>
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Choose <span class="ui">Well-known URL</span> and paste:</p>
+              <div class="code"><pre><span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/ssf-configuration</pre></div>
+              <p>Or choose <span class="ui">Issuer URL</span> and <span class="ui">JWKS URL</span>:</p>
+              <dl class="kv">
+                <dt>Issuer URL</dt><dd><span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span></dd><button class="copy" type="button">Copy</button>
+                <dt>JWKS URL</dt><dd><span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/jwks.json</dd><button class="copy" type="button">Copy</button>
+              </dl></div></li>
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Click <span class="ui">Create</span>. The stream shows as <span class="pill">Active</span>.</p></div></li>
+          </ol>
+        </div>
+        <div role="tabpanel" id="tab-api" aria-labelledby="t-api" hidden>
+          <ol class="steps">
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Create an API token in <span class="path">Security<span class="sep">›</span>API<span class="sep">›</span>Tokens</span>.</p></div></li>
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Create the provider. The well-known form lets Okta read the issuer and JWKS URL from your metadata:</p>
+              <div class="code has-lang"><span class="lang">bash</span><pre>curl -X POST "<span class="v" data-var="org">https://your-org.okta.com</span>/api/v1/security-events-providers" \
+  -H "Authorization: SSWS $OKTA_API_TOKEN" \
+  -H "Accept: application/json" -H "Content-Type: application/json" \
+  -d '{
+    "name": "Custom SSF Transmitter",
+    "type": "custom",
+    "settings": {
+      "well_known_url": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/ssf-configuration"
+    }
+  }'</pre></div>
+              <p>The non-SSF form uses <code>issuer</code> and <code>jwks_url</code> instead:</p>
+              <div class="code has-lang"><span class="lang">json</span><pre>"settings": {
+  "issuer": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>",
+  "jwks_url": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/jwks.json"
+}</pre></div></div></li>
+            <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Or use the included script, which reads your metadata so the values always match:</p>
+              <div class="code has-lang"><span class="lang">bash</span><pre>cd transmitter
+OKTA_ORG_URL=<span class="v" data-var="org">https://your-org.okta.com</span> OKTA_API_TOKEN=00x... \
+TRANSMITTER_URL=<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span> npm run register
+<span class="c"># add  -- --jwks  for the issuer/JWKS form,  -- --list  to list providers</span></pre></div></div></li>
+          </ol>
+          <div class="note warn"><b>About the type field</b>Okta's schema describes <code>type</code> as a free-form "application type" and doesn't list allowed values, so <code>custom</code> is a placeholder. If your org rejects it, use the Admin Console tab, which doesn't ask for a type.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 4 ============ -->
+    <section class="part" id="oidc" data-sec="oidc">
+      <div class="eyebrow">Okta Admin Console</div>
+      <h2>4. Create the OIDC web app</h2>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Go to <span class="path">Applications<span class="sep">›</span>Applications</span>, click <span class="ui">Create App Integration</span>, choose <span class="ui">OIDC - OpenID Connect</span>, then <span class="ui">Web Application</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Under <span class="ui">Grant type</span>, select <span class="ui">Authorization Code</span> and <span class="ui">Refresh Token</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Enter the redirect URIs:</p>
+          <dl class="kv">
+            <dt>Sign-in redirect URI</dt><dd><span class="v" data-var="app">https://acme-portal.up.railway.app</span>/authorization-code/callback</dd><button class="copy" type="button">Copy</button>
+            <dt>Sign-out redirect URI</dt><dd><span class="v" data-var="app">https://acme-portal.up.railway.app</span>/</dd><button class="copy" type="button">Copy</button>
+          </dl></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Under <span class="ui">Assignments</span>, assign the demo user or their group directly.</p>
+          <div class="note warn"><b>Use explicit assignments</b>Universal Logout doesn't work for custom apps when Federation Broker Mode is on.</div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Save, then copy the <span class="ui">Client ID</span> and <span class="ui">Client secret</span> into the web app's Railway variables (<code>OKTA_CLIENT_ID</code>, <code>OKTA_CLIENT_SECRET</code>). Railway redeploys it.</p></div></li>
+      </ol>
+      <div class="note tip"><b>Why the org authorization server</b>The app signs users in against your org URL rather than <code>/oauth2/default</code>. Okta signs the Universal Logout token with the org's SSO key and sets its issuer to the org URL, so both use the same issuer and keys.</div>
+    </section>
+
+    <!-- ============ 5 ============ -->
+    <section class="part" id="ulo" data-sec="ulo">
+      <div class="eyebrow">Okta Admin Console</div>
+      <h2>5. Turn on Universal Logout for the app</h2>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Open the app, go to the <span class="ui">Sign On</span> tab (called <span class="ui">Authentication</span> in some orgs), and in the <span class="ui">Logout</span> section click <span class="ui">Edit</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Under <span class="ui">Global Token Revocation</span>, select <span class="ui">Okta system or admin initiates logout</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Set the <span class="ui">Logout endpoint URL</span>:</p>
+          <dl class="kv"><dt>Logout endpoint URL</dt><dd><span class="v" data-var="app">https://acme-portal.up.railway.app</span>/global-token-revocation</dd><button class="copy" type="button">Copy</button></dl></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Leave <span class="ui">Endpoint authentication type</span> as <span class="ui">Signed JWT</span>, set <span class="ui">Subject format type</span> to <span class="ui">Email Identifier</span>, and click <span class="ui">Save</span>.</p>
+          <p>The app also handles <span class="ui">Issuer and Subject Identifier</span> if you prefer it.</p></div></li>
+      </ol>
+    </section>
+
+    <!-- ============ 6 ============ -->
+    <section class="part" id="risk" data-sec="risk">
+      <div class="eyebrow">Okta Admin Console</div>
+      <h2>6. Add the entity risk policy rule</h2>
+      <p class="lede">This rule is what reacts to your SET. A high user risk from your provider signs the user out of Okta and every app that supports Universal Logout.</p>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Go to <span class="path">Security<span class="sep">›</span>Entity Risk Policy</span> (or <span class="path">Security<span class="sep">›</span>Identity Threat Protection</span>, then <span class="ui">Go to entity risk policy</span>) and click <span class="ui">Add rule</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Fill in the rule:</p>
+          <div class="tbl"><table><thead><tr><th>Field</th><th>Set it to</th></tr></thead><tbody>
+            <tr><td>Rule name</td><td>High risk from SSF provider → Universal Logout</td></tr>
+            <tr><td>User's group membership includes</td><td>Any group, or your demo group</td></tr>
+            <tr><td>Detection</td><td><span class="ui">Include</span> → <i>Security events provider reported risk</i> (or <span class="ui">Any detection</span>)</td></tr>
+            <tr><td>Entity risk level</td><td><span class="ui">High</span></td></tr>
+            <tr><td>Take this action</td><td><span class="ui">Logout and revoke tokens</span> → <span class="ui">Universal Logout and Partial Universal Logout</span></td></tr>
+          </tbody></table></div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Click <span class="ui">Save</span>, then drag the rule <b>above</b> the default catch-all rule, which only logs.</p></div></li>
+      </ol>
+    </section>
+
+    <!-- ============ 7 ============ -->
+    <section class="part" id="session" data-sec="session">
+      <div class="eyebrow">Okta Admin Console · optional</div>
+      <h2>7. Session protection (optional)</h2>
+      <p class="lede">Session protection checks risk on each active session. It suits IP or session-level signals such as <code>ip-change</code> and <code>session-revoked</code>. The main demo doesn't need it.</p>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Go to <span class="path">Security<span class="sep">›</span>Identity Threat Protection</span>, open the <span class="ui">Detection and Response</span> tab, then <span class="ui">Session Protection</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Set <span class="ui">Status</span> to <span class="ui">Enforced</span> (or <span class="ui">Monitoring</span> to only log).</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Under <span class="ui">Session violation detection</span>, click <span class="ui">Edit</span> and choose risk level <span class="ui">High</span> (or <span class="ui">Medium and above</span>).</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Under <span class="ui">Enforcement settings</span>, keep <span class="ui">Okta logout</span>, click <span class="ui">Run an additional action</span>, choose <span class="ui">App logout</span>, and <span class="ui">Save</span>.</p></div></li>
+      </ol>
+    </section>
+
+    <!-- ============ 8 ============ -->
+    <section class="part" id="demo" data-sec="demo">
+      <div class="eyebrow">Showtime</div>
+      <h2>8. Run the demo</h2>
+      <ol class="steps">
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In a private browser window, open the web app and click <span class="ui">Sign in with Okta</span>. Sign in as the demo user. Optionally open the Okta End-User Dashboard in another tab of the same window.</p>
+          <div class="code"><pre><span class="v" data-var="app">https://acme-portal.up.railway.app</span></pre></div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In your own browser, open the transmitter console. Sign in with any username and your <code>ADMIN_PASSWORD</code>.</p>
+          <div class="code"><pre><span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span></pre></div></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Enter <code class="v" data-var="email">jane.doe@acme.com</code>, keep <span class="ui">User risk change (Okta)</span> with <b>low → high</b>, and click <span class="ui">Sign and send to Okta</span>. You should see <span class="pill">HTTP 202</span>, the decoded SET and the compact JWT.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>Within a few seconds the Acme Portal tab shows <i>"Your session was ended by Okta Universal Logout"</i> and the Okta dashboard tab asks the user to sign in again. The portal's <span class="ui">Universal Logout requests from Okta</span> table shows a <span class="pill">204</span>.</p></div></li>
+        <li><input type="checkbox" class="chk" aria-label="Done"><div class="body"><p>In <span class="path">Reports<span class="sep">›</span>System Log</span>, show the chain: <code>security.events.provider.receive_event</code>, then <code>user.risk.detect</code>, then the entity risk policy's logout action.</p></div></li>
+      </ol>
+      <p>To send from the command line instead:</p>
+      <div class="code has-lang"><span class="lang">bash</span><pre>cd transmitter
+TRANSMITTER_URL=<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span> ADMIN_PASSWORD=... \
+npm run send -- <span class="v" data-var="email">jane.doe@acme.com</span> user-risk-change</pre></div>
+      <div class="note warn"><b>Running it again</b>The policy acts when risk <i>changes</i> to High, so sending "high" again for a user who is already High may do nothing. Reset first: send <b>high → low</b> (or <b>none</b>) from the console, or reset the user's risk in the Admin Console. Then send <b>low → high</b> again.</div>
+    </section>
+
+    <!-- ============ Reference ============ -->
+    <section class="part" id="set">
+      <div class="eyebrow">Reference</div>
+      <h2>SET format Okta accepts</h2>
+      <p class="lede">These rules come from Okta's Management API schema for the SSF receiver and the <a href="https://developer.okta.com/docs/guides/configure-ssf-receiver/main/" target="_blank" rel="noopener">Configure SSF receiver guide</a>. The transmitter already follows them.</p>
+
+      <h3>Delivery</h3>
+      <div class="code has-lang"><span class="lang">http</span><pre>POST <span class="v" data-var="org">https://your-org.okta.com</span>/security/api/v1/security-events
+Content-Type: application/secevent+jwt
+Accept: application/json
+
+&lt;compact signed JWT&gt;</pre></div>
+      <p>No API token is needed. The signature, checked against the provider's registered JWKS, is the authentication. Okta returns <span class="pill">202 Accepted</span> with no body on success, or <span class="pill bad">400</span> with <code>{"err": "...", "description": "..."}</code>, where <code>err</code> is <code>authentication_failed</code>, <code>invalid_audience</code>, <code>invalid_issuer</code>, <code>invalid_key</code> or <code>invalid_request</code>.</p>
+
+      <h3>JOSE header</h3>
+      <div class="code has-lang"><span class="lang">json</span><pre>{ "alg": "RS256", "typ": "secevent+jwt", "kid": "&lt;kid published in the JWKS&gt;" }</pre></div>
+
+      <h3>Claims</h3>
+      <div class="tbl"><table><thead><tr><th>Claim</th><th>Value</th><th>Notes</th></tr></thead><tbody>
+        <tr><td><code>iss</code></td><td class="wrap"><code class="v" data-var="tx">https://ssf-transmitter.up.railway.app</code></td><td>Must match <b>exactly</b> the issuer Okta stored for the provider.</td></tr>
+        <tr><td><code>aud</code></td><td class="wrap"><code class="v" data-var="org">https://your-org.okta.com</code></td><td>Your org URL, not an authorization server URL.</td></tr>
+        <tr><td><code>iat</code></td><td>Now, in UNIX seconds</td><td></td></tr>
+        <tr><td><code>jti</code></td><td>Random UUID</td><td>Must be unique. Okta <b>silently ignores</b> a repeated <code>jti</code>.</td></tr>
+        <tr><td><code>events</code></td><td>One event, keyed by its type URI</td><td>No top-level <code>sub</code>. The subject goes inside the event.</td></tr>
+      </tbody></table></div>
+
+      <h3>Event types</h3>
+      <p>This is the complete list in Okta's receiver schema. ⭐ marks the demo trigger.</p>
+      <div class="tbl"><table><thead><tr><th>Console key</th><th>Event type URI</th><th>Fields besides subject and event_timestamp</th></tr></thead><tbody>
+        <tr><td><code>user-risk-change</code> ⭐</td><td class="wrap"><code>https://schemas.okta.com/secevent/okta/event-type/user-risk-change</code></td><td><code>previous_level</code>, <code>current_level</code>: none, secure, low, medium, high</td></tr>
+        <tr><td><code>session-revoked</code></td><td class="wrap"><code>https://schemas.openid.net/secevent/caep/event-type/session-revoked</code></td><td>Optional <code>current_ip</code>, <code>last_known_ip</code>, user agents</td></tr>
+        <tr><td><code>device-risk-change</code></td><td class="wrap"><code>https://schemas.okta.com/secevent/okta/event-type/device-risk-change</code></td><td><code>previous_level</code>, <code>current_level</code></td></tr>
+        <tr><td><code>ip-change</code></td><td class="wrap"><code>https://schemas.okta.com/secevent/okta/event-type/ip-change</code></td><td><code>previous_ip_address</code>, <code>current_ip_address</code></td></tr>
+        <tr><td><code>device-compliance-change</code></td><td class="wrap"><code>https://schemas.openid.net/secevent/caep/event-type/device-compliance-change</code></td><td><code>previous_status</code>, <code>current_status</code>: compliant, not-compliant</td></tr>
+        <tr><td><code>identifier-changed</code></td><td class="wrap"><code>https://schemas.openid.net/secevent/risc/event-type/identifier-changed</code></td><td>Optional <code>new_value</code></td></tr>
+      </tbody></table></div>
+      <p>Every event also accepts <code>initiating_entity</code> (admin, user, policy, system) and <code>reason_admin</code> / <code>reason_user</code> as <code>{"en": "..."}</code>. Other CAEP events such as <code>credential-change</code>, <code>assurance-level-change</code> and <code>risk-level-change</code> aren't in Okta's receiver schema, so the transmitter doesn't offer them.</p>
+
+      <h3>Subject</h3>
+      <div class="code has-lang"><span class="lang">json</span><pre>"subject": { "user": { "format": "email", "email": "<span class="v" data-var="email">jane.doe@acme.com</span>" } }</pre></div>
+      <div class="note warn"><b>Email must match</b>The email must be a sign-in email of an existing Okta user. If it isn't, Okta still answers 202 but drops the event, and nothing appears in the System Log.</div>
+
+      <h3>Full example</h3>
+      <p>This is what the console sends by default.</p>
+      <div class="code has-lang"><span class="lang">json</span><pre>{
+  "iss": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>",
+  "aud": "<span class="v" data-var="org">https://your-org.okta.com</span>",
+  "iat": 1794205775,
+  "jti": "51247df5-0996-4552-b1b7-8be2379634d2",
+  "events": {
+    "https://schemas.okta.com/secevent/okta/event-type/user-risk-change": {
+      "subject": { "user": { "format": "email", "email": "<span class="v" data-var="email">jane.doe@acme.com</span>" } },
+      "event_timestamp": 1794205775,
+      "initiating_entity": "policy",
+      "previous_level": "low",
+      "current_level": "high",
+      "reason_admin": { "en": "Impossible travel and credential stuffing detected by custom XDR" },
+      "reason_user": { "en": "Impossible travel and credential stuffing detected by custom XDR" }
+    }
+  }
+}</pre></div>
+      <div class="note tip"><b>Why user-risk-change to high</b>Okta turns a provider's SET into the ITP detection <i>Security events provider reported risk</i> (<code>SECURITY_EVENTS_PROVIDER_REPORTED_RISK</code>), logs <code>user.risk.detect</code>, and raises the user's entity risk. The entity risk policy then runs its matching rule, which is where you chose Universal Logout.</div>
+    </section>
+
+    <section class="part" id="metadata">
+      <div class="eyebrow">Reference</div>
+      <h2>Transmitter metadata</h2>
+      <p><code>GET /.well-known/ssf-configuration</code>, served as <code>application/json</code>:</p>
+      <div class="code has-lang"><span class="lang">json</span><pre>{
+  "spec_version": "1_0",
+  "issuer": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>",
+  "jwks_uri": "<span class="v" data-var="tx">https://ssf-transmitter.up.railway.app</span>/.well-known/jwks.json",
+  "delivery_methods_supported": ["urn:ietf:rfc:8935"],
+  "authorization_schemes": [{ "spec_urn": "urn:ietf:rfc:7523" }],
+  "default_subjects": "NONE"
+}</pre></div>
+      <p><code>GET /.well-known/jwks.json</code> returns one RSA key with <code>use: sig</code>, <code>alg: RS256</code> and a <code>kid</code>.</p>
+    </section>
+
+    <section class="part" id="ulo-ref">
+      <div class="eyebrow">Reference</div>
+      <h2>Universal Logout request</h2>
+      <p>What Okta sends to the web app, and what the app checks:</p>
+      <div class="code has-lang"><span class="lang">http</span><pre>POST /global-token-revocation
+Authorization: Bearer &lt;JWT, header typ = global-token-revocation+jwt&gt;
+
+{"sub_id": {"format": "email", "email": "<span class="v" data-var="email">jane.doe@acme.com</span>"}}</pre></div>
+      <div class="tbl"><table><thead><tr><th>Check</th><th>Expected</th></tr></thead><tbody>
+        <tr><td>Signature</td><td class="wrap"><code><span class="v" data-var="org">https://your-org.okta.com</span>/oauth2/v1/keys</code></td></tr>
+        <tr><td><code>iss</code></td><td class="wrap">Your org URL</td></tr>
+        <tr><td><code>aud</code></td><td class="wrap"><code><span class="v" data-var="app">https://acme-portal.up.railway.app</span>/global-token-revocation</code></td></tr>
+        <tr><td><code>sub</code></td><td>The app's client ID</td></tr>
+        <tr><td><code>exp</code>, <code>nbf</code>, <code>iat</code></td><td>Valid, with 60 seconds of tolerance</td></tr>
+      </tbody></table></div>
+      <div class="tbl"><table><thead><tr><th>App response</th><th>When</th></tr></thead><tbody>
+        <tr><td><span class="pill">204</span></td><td>All of the user's sessions were destroyed</td></tr>
+        <tr><td><span class="pill bad">401</span></td><td>Missing or invalid token</td></tr>
+        <tr><td><span class="pill bad">400</span></td><td>Malformed or unsupported <code>sub_id</code></td></tr>
+        <tr><td><span class="pill bad">404</span></td><td>The user never signed in to this app</td></tr>
+      </tbody></table></div>
+      <p>The app also accepts <code>{"sub_id": {"format": "iss_sub", "iss": "...", "sub": "..."}}</code>.</p>
+    </section>
+
+    <section class="part" id="api">
+      <div class="eyebrow">Reference</div>
+      <h2>SSF Receiver API</h2>
+      <div class="tbl"><table><thead><tr><th>Method</th><th>Path</th><th>Does</th></tr></thead><tbody>
+        <tr><td>GET</td><td><code>/api/v1/security-events-providers</code></td><td>List providers</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/security-events-providers</code></td><td>Create a provider</td></tr>
+        <tr><td>GET · PUT · DELETE</td><td><code>/api/v1/security-events-providers/{id}</code></td><td>Read, replace or delete one</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/security-events-providers/{id}/lifecycle/activate</code></td><td>Activate</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/security-events-providers/{id}/lifecycle/deactivate</code></td><td>Deactivate</td></tr>
+      </tbody></table></div>
+      <p>A response has <code>id</code>, <code>name</code>, <code>type</code>, <code>status</code> (<code>ACTIVE</code> or <code>INACTIVE</code>) and <code>settings</code> (<code>issuer</code>, <code>jwks_url</code>, <code>well_known_url</code>). Requests use an admin API token: <code>Authorization: SSWS &lt;token&gt;</code>.</p>
+    </section>
+
+    <section class="part" id="trouble">
+      <div class="eyebrow">Reference</div>
+      <h2>Troubleshooting</h2>
+      <div class="tbl"><table><thead><tr><th>Symptom</th><th>Likely cause and fix</th></tr></thead><tbody>
+        <tr><td><code>400 invalid_issuer</code></td><td>The SET's <code>iss</code> doesn't exactly match the provider's issuer. Compare the console's <b>Issuer</b> with the provider in Okta (https, no trailing slash). If the Railway domain changed, update the provider.</td></tr>
+        <tr><td><code>400 invalid_audience</code></td><td><code>OKTA_ORG_URL</code> is wrong. It must be the org URL, not <code>/oauth2/default</code>. If your org expects a trailing slash, set <code>SET_AUDIENCE</code> to the org URL with a trailing slash.</td></tr>
+        <tr><td><code>400 invalid_key</code> or <code>authentication_failed</code></td><td>The key changed because <code>SIGNING_KEY_PEM</code> isn't set, or Okta can't reach the JWKS URL.</td></tr>
+        <tr><td>202 but nothing in the System Log</td><td>The email isn't a sign-in email of an Okta user, or the <code>jti</code> was reused.</td></tr>
+        <tr><td>Event logged but no logout</td><td>The entity risk rule doesn't match (check level, detection and rule order), the user was already High, or the user's group is excluded.</td></tr>
+        <tr><td>Okta signs the user out but the app doesn't</td><td>Check the portal's Universal Logout table. <b>401</b>: the token check failed; the reason is in the Railway logs, and setting <code>STRICT_LOGOUT_AUTH=false</code> briefly shows the decoded token. <b>404</b>: the user never signed in to this instance, for example after a redeploy. <b>No entry</b>: the logout endpoint URL in the app's Logout settings is wrong.</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <section class="part" id="local">
+      <div class="eyebrow">Reference</div>
+      <h2>Local end-to-end test</h2>
+      <p>The <code>test/</code> folder runs the whole chain against a mock Okta. The mock checks the header, the RS256 signature against the published JWKS, <code>iss</code> from the well-known config, <code>aud</code> equal to the org URL, a unique <code>jti</code>, the accepted event types and the email subject. It then simulates a "High → Universal Logout" rule and sends a signed <code>global-token-revocation+jwt</code> to the app.</p>
+      <div class="code has-lang"><span class="lang">bash</span><pre>(cd transmitter &amp;&amp; npm install) &amp;&amp; (cd webapp &amp;&amp; npm install) &amp;&amp; (cd test &amp;&amp; npm install)
+bash test/e2e.sh
+<span class="c"># ends with: PASS: SET -&gt; Universal Logout ended the app session</span></pre></div>
+      <div class="note ok"><b>Scope</b>The mock only models what Okta documents. Risk scoring, policy timing and System Log events in a real tenant still need the walkthrough in step 8.</div>
+    </section>
+
+    <footer>Okta SSF Demo Setup. Code: <code>okta-ssf-demo/</code> (transmitter, webapp, test).</footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  // ---- Your values: live substitution ----
+  const defaults = {};
+  document.querySelectorAll('.v[data-var]').forEach(el => { defaults[el.dataset.var] ??= el.textContent; });
+  function clean(key, val) {
+    val = (val || '').trim();
+    if (key !== 'email') val = val.replace(/\/+$/, '');
+    if (key !== 'email' && val && !/^https?:\/\//.test(val)) val = 'https://' + val;
+    return val;
+  }
+  function apply(key, val) {
+    const out = clean(key, val) || defaults[key];
+    document.querySelectorAll('.v[data-var="' + key + '"]').forEach(el => { el.textContent = out; });
+  }
+  document.querySelectorAll('.fields input').forEach(inp => {
+    const key = inp.dataset.key;
+    const saved = store.get('ssfguide.' + key);
+    if (saved) inp.value = saved;
+    apply(key, inp.value);
+    inp.addEventListener('input', () => { store.set('ssfguide.' + key, inp.value); apply(key, inp.value); });
+  });
+
+  // ---- Copy buttons on code blocks ----
+  document.querySelectorAll('.code').forEach(block => {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'copy'; btn.textContent = 'Copy';
+    block.appendChild(btn);
+  });
+  function selectText(el) {
+    const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.copy');
+    if (!btn) return;
+    const src = btn.closest('.code') ? btn.closest('.code').querySelector('pre') : btn.previousElementSibling;
+    const text = src.textContent;
+    const done = (label) => { btn.textContent = label; setTimeout(() => { btn.textContent = 'Copy'; }, 1400); };
+    try {
+      navigator.clipboard.writeText(text).then(() => done('Copied'), () => { selectText(src); done('Selected'); });
+    } catch { selectText(src); done('Selected'); }
+  });
+
+  // ---- Tabs ----
+  document.querySelectorAll('[data-tabs]').forEach(t => {
+    const tabs = [...t.querySelectorAll('[role=tab]')];
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      tabs.forEach(x => {
+        const on = x === tab;
+        x.setAttribute('aria-selected', on);
+        document.getElementById(x.getAttribute('aria-controls')).hidden = !on;
+      });
+      progress();
+    }));
+  });
+
+  // ---- Step checkboxes + progress ----
+  const boxes = [...document.querySelectorAll('.chk')];
+  boxes.forEach((b, i) => {
+    b.id = 'step-' + i;
+    if (store.get('ssfguide.step.' + i) === '1') b.checked = true;
+    b.closest('li').classList.toggle('checked', b.checked);
+    b.addEventListener('change', () => {
+      store.set('ssfguide.step.' + i, b.checked ? '1' : '0');
+      b.closest('li').classList.toggle('checked', b.checked);
+      progress();
+    });
+  });
+  const visible = (el) => !el.closest('[hidden]');
+  function progress() {
+    // The optional session protection section doesn't count toward the total.
+    const counted = boxes.filter(b => visible(b) && !b.closest('#session'));
+    const done = counted.filter(b => b.checked).length;
+    document.getElementById('pbar').style.width = (counted.length ? done / counted.length * 100 : 0) + '%';
+    document.getElementById('plbl').textContent = done + ' of ' + counted.length + ' steps done';
+    document.querySelectorAll('#toc a[data-sec]').forEach(a => {
+      const sec = document.getElementById(a.dataset.sec);
+      const bs = [...sec.querySelectorAll('.chk')].filter(visible);
+      const d = bs.filter(b => b.checked).length;
+      a.querySelector('.n').textContent = d === bs.length && bs.length ? '✓' : d + '/' + bs.length;
+      a.classList.toggle('done', d === bs.length && bs.length > 0);
+    });
+  }
+  document.getElementById('reset').addEventListener('click', () => {
+    boxes.forEach((b, i) => { b.checked = false; b.closest('li').classList.remove('checked'); store.del('ssfguide.step.' + i); });
+    progress();
+  });
+  progress();
+})();
+</script>

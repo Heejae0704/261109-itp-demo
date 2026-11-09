@@ -1,0 +1,18 @@
+{
+  "name": "okta-universal-logout-webapp",
+  "version": "1.0.0",
+  "description": "Demo OIDC web app for Okta with a Universal Logout (Global Token Revocation) endpoint",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "jose": "^6.0.11"
+  }
+}

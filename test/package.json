@@ -1,0 +1,3 @@
+{ "name": "ssf-demo-e2e", "private": true, "type": "module",
+  "scripts": { "e2e": "bash e2e.sh" },
+  "dependencies": { "express": "^5.1.0", "jose": "^6.0.11" } }

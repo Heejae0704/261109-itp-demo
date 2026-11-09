@@ -1,0 +1,20 @@
+{
+  "name": "okta-ssf-transmitter",
+  "version": "1.0.0",
+  "description": "Demo Shared Signals Framework (SSF) transmitter that pushes signed SETs to Okta Identity Threat Protection",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "genkey": "node scripts/genkey.js",
+    "send": "node scripts/send.js",
+    "register": "node scripts/register-okta.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "jose": "^6.0.11"
+  }
+}
